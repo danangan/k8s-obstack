@@ -3,6 +3,9 @@
 An opinionated Helm chart that sets up a self-contained observability stack (obstack) for a Kubernetes cluster.
 It's built on OpenTelemetry (OTel), **Prometheus**, **Loki**, **Tempo** and **Grafana**.
 
+The chart is published to the public GitHub Container Registry (GHCR) as an OCI Helm chart:
+`oci://ghcr.io/danangan/charts/obstack` ([package page](https://github.com/danangan/k8s-obstack/pkgs/container/charts%2Fobstack)).
+
 Features:
 
 - A standardised entry point for metrics, logs and traces using the OTel collector
@@ -10,6 +13,8 @@ Features:
 - Kubernetes cluster metrics
 - Host (node) metrics
 - A Grafana UI to query and explore metrics, logs and traces
+- Persistent volume for the backends
+- Ingress setup to expose Grafana UI
 
 ## Architecture
 
@@ -107,6 +112,10 @@ This chart is opinionated towards AWS EKS as its target, which requires:
 ```sh
 helm install obstack oci://ghcr.io/danangan/charts/obstack --version <version>
 ```
+
+The chart is pulled straight from GHCR; there's no `helm repo add` step and no login needed. Available
+versions are listed on the [package page](https://github.com/danangan/k8s-obstack/pkgs/container/charts%2Fobstack),
+and `helm show chart oci://ghcr.io/danangan/charts/obstack` shows the latest one.
 
 The chart creates the `obstack` namespace and puts everything in it. 
 
