@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: {{ $.Values.namespace.name }}
+data:
+  datasources.yaml: |
+    {{- tpl (.Files.Get "configs/grafana-datasources.yaml") . | trimSuffix "\n" | nindent 4 }}

@@ -1,0 +1,111 @@
+# Reference: https://opentelemetry.io/docs/platforms/kubernetes/collector/components/
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: ${env:MY_POD_IP}:4317
+      http:
+        endpoint: ${env:MY_POD_IP}:4318
+  kubelet_stats:
+    collection_interval: 30s
+    auth_type: serviceAccount
+    endpoint: https://${env:K8S_NODE_IP}:10250
+    insecure_skip_verify: true
+    metric_groups: [node, pod, container]
+  host_metrics:
+    collection_interval: 30s
+    root_path: /hostfs
+    scrapers:
+      cpu: {}
+      load: {}
+      memory: {}
+      paging: {}
+      disk: {}
+      filesystem:
+        exclude_mount_points:
+          match_type: regexp
+          # Pod volumes the kubelet mounts, including attached EBS volume claims: real devices,
+          # but per-pod mounts that come and go with pods.
+          mount_points: ["^/var/lib/kubelet/.*"]
+  file_log:
+    include:
+      - /var/log/pods/*/*/*.log
+    exclude:
+      # IMPORTANT: Skip this collector's own logs (its container is named otel-collector) so the debug exporter can't feed back into itself.
+      - /var/log/pods/*/otel-collector/*.log
+    start_at: end
+    include_file_path: true
+    include_file_name: false
+    storage: file_storage
+    operators:
+      - type: container
+        id: container-parser
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch: {}
+  k8s_attributes:
+    auth_type: serviceAccount
+    filter:
+      node_from_env_var: K8S_NODE_NAME
+    pod_association:
+      - sources:
+          - from: resource_attribute
+            name: k8s.pod.uid
+      - sources:
+          - from: resource_attribute
+            name: k8s.pod.ip
+      - sources:
+          - from: connection
+    extract:
+      metadata:
+        - k8s.namespace.name
+        - k8s.pod.name
+        - k8s.pod.uid
+        - k8s.node.name
+        - k8s.node.uid
+        - k8s.deployment.name
+  resource/node:
+    attributes:
+      - key: k8s.node.name
+        value: ${env:K8S_NODE_NAME}
+        action: upsert
+exporters:
+  {{- if .Values.otelCollector.debug}}
+  debug: {}
+  {{- end }}    
+  otlp_http/prometheus:
+    endpoint: http://prometheus.{{ $.Values.namespace.name }}.svc.cluster.local:9090/api/v1/otlp
+  otlp_grpc/tempo:
+    endpoint: tempo.{{ $.Values.namespace.name }}.svc.cluster.local:4317
+    tls:
+      insecure: true
+  otlp_http/loki:
+    endpoint: http://loki.{{ $.Values.namespace.name }}.svc.cluster.local:3100/otlp
+extensions:
+  health_check:
+    endpoint: ${env:MY_POD_IP}:13133
+  file_storage:
+    directory: /var/lib/otelcol/file_storage
+    create_directory: true
+service:
+  extensions: [health_check, file_storage]
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, k8s_attributes, batch]
+      exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]
+    metrics/node:
+      receivers: [kubelet_stats, host_metrics]
+      processors: [memory_limiter, resource/node, k8s_attributes, batch]
+      exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]
+    logs:
+      receivers: [file_log, otlp]
+      processors: [memory_limiter, k8s_attributes, batch]
+      exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/loki]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, k8s_attributes, batch]
+      exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_grpc/tempo]

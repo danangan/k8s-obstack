@@ -186,6 +186,7 @@ kubectl -n obstack port-forward svc/grafana 3000
 | Path | Description |
 | --- | --- |
 | [Chart.yaml](Chart.yaml), [values.yaml](values.yaml), [templates/](templates/) | The Helm chart (the repository root): collectors, Prometheus, Loki, Tempo and Grafana |
+| [configs/](configs/) | The components' configuration files, loaded into their ConfigMaps (Helm templating works inside them) |
 | [examples/minikube/](examples/minikube/) | Local development on minikube: start the cluster, deploy the stack with local overrides |
 | [examples/sample-app/](examples/sample-app/) | FastAPI app (managed with [uv](https://docs.astral.sh/uv/)) instrumented with OpenTelemetry, and its build-and-deploy script |
 | [examples/sample-app/k8s/](examples/sample-app/k8s/) | Helm chart for the sample app |
@@ -258,7 +259,7 @@ Metrics come from five sources, all pushed to Prometheus over OTLP rather than s
 
 ### Logs
 
-The node collector tails every container's stdout and stderr from the node's `/var/log/pods`, so logs require no further setup on the application side. The OTel collector handles the k8s metadata enrichment for discoverability.
+The node collector tails every container's stdout and stderr from the node's `/var/log/pods`, so logs require no further setup on the application side. The OTel collector handles the k8s metadata enrichment for discoverability. Log lines are stored as-is: Loki detects their level from a `level` key in JSON or logfmt lines, and JSON fields are parsed at query time, for example `{service_name="my-app"} | json | status_code="500"`.
 
 ### Traces
 

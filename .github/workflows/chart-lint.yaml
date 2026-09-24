@@ -8,6 +8,7 @@ on:
       - Chart.yaml
       - values.yaml
       - templates/**
+      - configs/**
       - .helmignore
       - examples/minikube/values-minikube.yaml
       - .github/workflows/chart-*.yaml
@@ -17,6 +18,7 @@ on:
       - Chart.yaml
       - values.yaml
       - templates/**
+      - configs/**
       - .helmignore
       - examples/minikube/values-minikube.yaml
       - .github/workflows/chart-*.yaml

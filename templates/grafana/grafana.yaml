@@ -19,7 +19,7 @@ spec:
         app: grafana
       annotations:
         # Roll the pod when datasources change; provisioning is only read at startup.
-        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources.yaml") . | sha256sum }}
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
     spec:
       {{- include "obstack.placement" . | nindent 6 }}
       {{- with .Values.grafana.podSecurityContext }}

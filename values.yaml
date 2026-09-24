@@ -22,18 +22,35 @@ storage:
       type: gp3
       encrypted: "true"
 
+# Sizes below suit a small-to-medium cluster. On the dedicated node group the stack requests
+# ~2 CPU / 5 GiB and is limited to 8 CPU / 19.5 GiB, so a 4 vCPU / 32 GiB memory-optimized
+# node (e.g. r7g.xlarge, or r7i.xlarge on x86) fits it with headroom. Raise Prometheus's
+# memory first as the cluster grows: it scales with the number of active series.
+
+# Node collector (DaemonSet): runs on every node, including application nodes, so this is a
+# per-node cost. Load scales with that node's log and span volume. The memory request covers
+# a busy node (pods using more than they request are evicted first under memory pressure);
+# the CPU limit keeps a spike from taking CPU away from the node's applications.
 otelCollector:
   image: otel/opentelemetry-collector-k8s:0.160.0
   debug: false
-  tolerations:
-    - operator: Exists
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 100m
+      memory: 256Mi
     limits:
-      cpu: 300m
-      memory: 216Mi
+      cpu: 500m
+      memory: 512Mi
+
+# Cluster collector (single replica): scales with the number of objects in the cluster.
+otelClusterCollector:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
 
 prometheus:
   image: prom/prometheus:v3.13.3
@@ -48,11 +65,11 @@ prometheus:
     fsGroup: 65534
   resources:
     requests:
-      cpu: 250m
-      memory: 1Gi
+      cpu: 500m
+      memory: 2Gi
     limits:
-      cpu: "1"
-      memory: 4Gi
+      cpu: "2"
+      memory: 8Gi
 
 loki:
   image: grafana/loki:3.7.8
@@ -65,11 +82,11 @@ loki:
     fsGroup: 10001
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 500m
+      memory: 1Gi
     limits:
-      cpu: "1"
-      memory: 2Gi
+      cpu: "2"
+      memory: 4Gi
 
 tempo:
   image: grafana/tempo:3.0.3
@@ -82,11 +99,11 @@ tempo:
     fsGroup: 10001
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 500m
+      memory: 1Gi
     limits:
-      cpu: "1"
-      memory: 2Gi
+      cpu: "2"
+      memory: 4Gi
 
 
 grafana:
@@ -111,11 +128,11 @@ grafana:
     fsGroup: 472
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 250m
+      memory: 512Mi
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: "1"
+      memory: 2Gi
 
 ingress:
   enabled: true

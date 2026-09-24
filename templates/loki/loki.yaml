@@ -19,7 +19,7 @@ spec:
         app: loki
       annotations:
         # Roll the pod when the ConfigMap changes; Loki doesn't reload on its own.
-        checksum/config: {{ include (print $.Template.BasePath "/loki/loki-config.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/loki/loki-configmap.yaml") . | sha256sum }}
     spec:
       {{- include "obstack.placement" . | nindent 6 }}
       {{- with .Values.loki.podSecurityContext }}

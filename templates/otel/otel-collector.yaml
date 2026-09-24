@@ -66,15 +66,13 @@ spec:
         app: otel-collector
       annotations:
         # Roll the pods when the ConfigMap changes; the collector doesn't reload on its own.
-        checksum/config: {{ include (print $.Template.BasePath "/otel/otel-collector-config.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/otel/otel-collector-configmap.yaml") . | sha256sum }}
     spec:
       serviceAccountName: otel-collector
-      # Not pinned: it collects each node's metrics and logs, so it must run on every node,
-      # including the tainted dedicated obstack nodes.
-      {{- with .Values.otelCollector.tolerations }}
+      # Note: this daemonset must run in every node, including the tainted ones
+      # This is because this daemonset collects host and kubelet metrics
       tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        - operator: Exists
       # Root is needed to read /var/log/pods (root-owned, mode 0640) for the
       # file_log receiver; the host filesystem is still mounted read-only.
       securityContext:
@@ -101,7 +99,6 @@ spec:
                 fieldRef:
                   fieldPath: status.hostIP
           ports:
-            # hostPort so workloads can reach the node-local collector via status.hostIP
             - name: otlp
               containerPort: 4317
               hostPort: 4317
@@ -115,11 +112,14 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/otelcol
-            # Node root filesystem for the host_metrics receiver.
             - name: hostfs
               mountPath: /hostfs
               readOnly: true
               mountPropagation: HostToContainer
+            # Pod logs for the file_log receiver.
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
             - name: storage
               mountPath: /var/lib/otelcol
       volumes:
@@ -129,7 +129,9 @@ spec:
         - name: hostfs
           hostPath:
             path: /
-        # file_log read offsets (file_storage extension).
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
         - name: storage
           hostPath:
             path: /var/lib/otelcol

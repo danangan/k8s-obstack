@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: {{ $.Values.namespace.name }}
+data:
+  prometheus.yaml: |
+    {{- tpl (.Files.Get "configs/prometheus.yaml") . | trimSuffix "\n" | nindent 4 }}

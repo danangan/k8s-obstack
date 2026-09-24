@@ -3,9 +3,10 @@
 One JSON object per line, e.g.
   {"level": "INFO", "message": "order created", "order_id": "..."}
 
-The otel collector's file_log receiver parses these lines: `level` becomes the log severity
-and the other fields become log attributes (structured metadata in Loki). There's no timestamp
-field: the container runtime stamps every line, and the collector uses that as the log time.
+The otel collector ships these lines to Loki as-is. Loki detects the `level` key as the log
+level, and the fields are parsed at query time, e.g. `{service_name="sample-app"} | json`.
+There's no timestamp field: the container runtime stamps every line, and the collector uses
+that as the log time.
 Pod identity (namespace, pod, container, node, deployment) is also added by the collector,
 so the app doesn't log it. Lines logged inside a span carry `trace_id` and `span_id`, which
 Grafana uses to link logs and traces.

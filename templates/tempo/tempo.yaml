@@ -19,7 +19,7 @@ spec:
         app: tempo
       annotations:
         # Roll the pod when the ConfigMap changes; Tempo doesn't reload on its own.
-        checksum/config: {{ include (print $.Template.BasePath "/tempo/tempo-config.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/tempo/tempo-configmap.yaml") . | sha256sum }}
     spec:
       {{- include "obstack.placement" . | nindent 6 }}
       {{- with .Values.tempo.podSecurityContext }}

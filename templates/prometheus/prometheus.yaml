@@ -19,7 +19,7 @@ spec:
         app: prometheus
       annotations:
         # Roll the pod when the ConfigMap changes; Prometheus doesn't reload on its own.
-        checksum/config: {{ include (print $.Template.BasePath "/prometheus/prometheus-config.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/prometheus/prometheus-configmap.yaml") . | sha256sum }}
     spec:
       {{- include "obstack.placement" . | nindent 6 }}
       {{- with .Values.prometheus.podSecurityContext }}
