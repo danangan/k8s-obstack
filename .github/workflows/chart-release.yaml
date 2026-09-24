@@ -40,7 +40,6 @@ jobs:
 
       - name: Push
         run: |
-          # OCI repository names must be lowercase.
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          owner="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           helm push dist/obstack-*.tgz "oci://ghcr.io/${owner}/charts"
           echo "Published oci://ghcr.io/${owner}/charts/obstack:${GITHUB_REF_NAME#v}" >> "$GITHUB_STEP_SUMMARY"
