@@ -58,7 +58,6 @@ prometheus:
     time: 15d
     size: 45GB
   persistence:
-    enabled: true
     size: 50Gi
     storageClassName: ""
   podSecurityContext:
@@ -75,7 +74,6 @@ loki:
   image: grafana/loki:3.7.8
   retention: 336h
   persistence:
-    enabled: true
     size: 50Gi
     storageClassName: ""
   podSecurityContext:
@@ -92,7 +90,6 @@ tempo:
   image: grafana/tempo:3.0.3
   retention: 168h
   persistence:
-    enabled: true
     size: 50Gi
     storageClassName: ""
   podSecurityContext:
@@ -121,7 +118,6 @@ grafana:
     - grafana-lokiexplore-app
     - grafana-exploretraces-app
   persistence:
-    enabled: true
     size: 5Gi
     storageClassName: ""
   podSecurityContext:

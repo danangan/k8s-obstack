@@ -21,7 +21,19 @@ spec:
         # Roll the pod when the ConfigMap changes; Loki doesn't reload on its own.
         checksum/config: {{ include (print $.Template.BasePath "/loki/loki-configmap.yaml") . | sha256sum }}
     spec:
-      {{- include "obstack.placement" . | nindent 6 }}
+      # Pin to the dedicated obstack node group (placement.* values).
+      {{- with .Values.placement.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.placement.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.placement.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.loki.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -49,7 +61,9 @@ spec:
         - name: config
           configMap:
             name: loki-config
-        {{- include "obstack.dataVolume" (dict "name" "loki" "persistence" .Values.loki.persistence) | nindent 8 }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: loki-data
 ---
 apiVersion: v1
 kind: Service
@@ -63,7 +77,20 @@ spec:
     - name: http
       port: 3100
       targetPort: 3100
-{{- with (include "obstack.pvc" (dict "root" $ "name" "loki" "persistence" .Values.loki.persistence)) }}
 ---
-{{ . }}
-{{- end }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-data
+  namespace: {{ $.Values.namespace.name }}
+  annotations:
+    # Keep the claim, and so the volume and its data, on `helm uninstall`.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with (.Values.loki.persistence.storageClassName | default .Values.storage.className) }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.loki.persistence.size }}

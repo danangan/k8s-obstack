@@ -124,7 +124,7 @@ All of these defaults can be changed through values. This is the full reference 
 | `placement.nodeSelector` / `.tolerations` / `.affinity` | `workload: obstack` / `dedicated=obstack:NoSchedule` | Where the central components run |
 | `storage.className` | `obstack-gp3` | StorageClass for all volumes (empty = cluster default) |
 | `storage.storageClass.create` | `true` | Create the EBS gp3 StorageClass (expandable, `Retain`) |
-| `<component>.persistence.enabled` / `.size` | `true` / 50Gi (Grafana 5Gi) | Volume per component: `prometheus`, `loki`, `tempo`, `grafana` |
+| `<component>.persistence.size` | 50Gi (Grafana 5Gi) | Volume per component: `prometheus`, `loki`, `tempo`, `grafana` |
 | `prometheus.retention.time` / `.size` | `15d` / `45GB` | Metrics retention; keep `size` below the volume size |
 | `loki.retention` | `336h` | Log retention |
 | `tempo.retention` | `168h` | Trace retention |

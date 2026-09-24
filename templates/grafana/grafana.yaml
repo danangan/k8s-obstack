@@ -21,7 +21,19 @@ spec:
         # Roll the pod when datasources change; provisioning is only read at startup.
         checksum/datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
     spec:
-      {{- include "obstack.placement" . | nindent 6 }}
+      # Pin to the dedicated obstack node group (placement.* values).
+      {{- with .Values.placement.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.placement.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.placement.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.grafana.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -93,7 +105,9 @@ spec:
             name: grafana-datasources
         - name: plugins
           emptyDir: {}
-        {{- include "obstack.dataVolume" (dict "name" "grafana" "persistence" .Values.grafana.persistence) | nindent 8 }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-data
 ---
 apiVersion: v1
 kind: Service
@@ -107,7 +121,20 @@ spec:
     - name: http
       port: 3000
       targetPort: 3000
-{{- with (include "obstack.pvc" (dict "root" $ "name" "grafana" "persistence" .Values.grafana.persistence)) }}
 ---
-{{ . }}
-{{- end }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: {{ $.Values.namespace.name }}
+  annotations:
+    # Keep the claim, and so the volume and its data, on `helm uninstall`.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with (.Values.grafana.persistence.storageClassName | default .Values.storage.className) }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.grafana.persistence.size }}

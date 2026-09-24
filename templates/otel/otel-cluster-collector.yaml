@@ -20,7 +20,19 @@ spec:
         # Roll the pod when the ConfigMap changes; the collector doesn't reload on its own.
         checksum/config: {{ include (print $.Template.BasePath "/otel/otel-cluster-collector-configmap.yaml") . | sha256sum }}
     spec:
-      {{- include "obstack.placement" . | nindent 6 }}
+      # Pin to the dedicated obstack node group (placement.* values).
+      {{- with .Values.placement.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.placement.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.placement.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       # Shares the DaemonSet's ServiceAccount and read-only ClusterRole.
       serviceAccountName: otel-collector
       containers:
