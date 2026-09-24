@@ -1,0 +1,74 @@
+# Local development on minikube. Layered on top of the chart's values.yaml (the AWS
+# production defaults) by examples/minikube/deploy-obstack.sh, which runs (from the repo root)
+#   helm upgrade --install obstack . -f examples/minikube/values-minikube.yaml
+# Excluded from the published chart package by the root .helmignore (examples/).
+
+# No dedicated node: run on the single minikube node. (`null` removes the default map key;
+# an empty map would be merged with the defaults and keep them.)
+placement:
+  nodeSelector: null
+  tolerations: []
+
+# No EBS: don't create the gp3 StorageClass. Persistence is off below, so data lives in
+# emptyDirs and resets when a pod restarts. To keep data across restarts, enable a
+# component's persistence; it then uses minikube's default `standard` StorageClass
+# (those volumes can't be resized).
+storage:
+  className: ""
+  storageClass:
+    create: false
+
+prometheus:
+  retention:
+    time: 7d
+    size: 2GB
+  persistence:
+    enabled: false
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 216Mi
+
+loki:
+  retention: 168h
+  persistence:
+    enabled: false
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+tempo:
+  retention: 168h
+  persistence:
+    enabled: false
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+grafana:
+  # No login screen; anonymous users are admins.
+  anonymousAdmin: true
+  persistence:
+    enabled: false
+    size: 1Gi
+
+# Exposed through minikube's ingress-nginx addon instead of an AWS ALB; *.localtest.me
+# resolves to 127.0.0.1. `annotations: null` drops the default ALB annotations.
+ingress:
+  ingressClassName: nginx
+  grafanaHost: grafana.localtest.me
+  annotations: null

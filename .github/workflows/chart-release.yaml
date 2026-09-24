@@ -1,0 +1,46 @@
+# Publish the chart to GitHub Container Registry as an OCI artifact:
+#   oci://ghcr.io/<owner>/charts/obstack
+#
+# To release: bump `version` in Chart.yaml, commit, then push a matching tag:
+#   git tag v0.1.0 && git push origin v0.1.0
+name: Chart release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  # Push the chart package to GHCR with the workflow's GITHUB_TOKEN.
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+
+      - name: Check the tag matches the chart version
+        run: |
+          chart_version="$(helm show chart . | awk '/^version:/ {print $2}')"
+          if [ "v${chart_version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} doesn't match Chart.yaml version ${chart_version} (expected v${chart_version})"
+            exit 1
+          fi
+
+      - name: Lint
+        run: helm lint . --strict
+
+      - name: Package
+        run: helm package . --destination dist
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Push
+        run: |
+          # OCI repository names must be lowercase.
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          helm push dist/obstack-*.tgz "oci://ghcr.io/${owner}/charts"
+          echo "Published oci://ghcr.io/${owner}/charts/obstack:${GITHUB_REF_NAME#v}" >> "$GITHUB_STEP_SUMMARY"

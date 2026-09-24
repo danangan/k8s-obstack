@@ -1,0 +1,48 @@
+# Single-replica collector for cluster-scoped metrics. k8s_cluster must not run
+# in the DaemonSet, or every node would report the same objects.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-cluster-collector
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    app: otel-cluster-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-cluster-collector
+  template:
+    metadata:
+      labels:
+        app: otel-cluster-collector
+      annotations:
+        # Roll the pod when the ConfigMap changes; the collector doesn't reload on its own.
+        checksum/config: {{ include (print $.Template.BasePath "/otel/otel-cluster-collector-config.yaml") . | sha256sum }}
+    spec:
+      {{- include "obstack.placement" . | nindent 6 }}
+      # Shares the DaemonSet's ServiceAccount and read-only ClusterRole.
+      serviceAccountName: otel-collector
+      containers:
+        - name: otel-collector
+          image: {{ .Values.otelCollector.image }}
+          resources:
+            {{- toYaml .Values.otelCollector.resources | nindent 12 }}
+          args:
+            - --config=/etc/otelcol/config.yaml
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol
+      volumes:
+        - name: config
+          configMap:
+            name: otel-cluster-collector-config

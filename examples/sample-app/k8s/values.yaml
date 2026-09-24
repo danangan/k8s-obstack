@@ -1,0 +1,8 @@
+ingress:
+  enabled: true
+  className: nginx
+  host: app.localtest.me
+
+# Fraction of POST /orders requests that fail with a simulated error (0.0-1.0).
+orderFailureRate: 0.2
+logLevel: INFO

@@ -1,0 +1,19 @@
+{{- with .Values.storage.storageClass }}
+{{- if .create }}
+# Expandable StorageClass for the stack's volumes, e.g. EBS gp3 through the AWS EBS CSI driver.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .name }}
+provisioner: {{ .provisioner }}
+# Grow a volume by raising <component>.persistence.size and running `helm upgrade`.
+allowVolumeExpansion: true
+# Create the volume in the zone of the node the pod is scheduled on.
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: {{ .reclaimPolicy }}
+{{- with .parameters }}
+parameters:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}

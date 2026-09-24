@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-cluster-collector-config
+  namespace: {{ $.Values.namespace.name }}
+data:
+  config.yaml: |
+    receivers:
+      # Cluster-wide object state (kube-state-metrics equivalent): deployment
+      # replicas, pod phases, container restarts, node conditions, etc.
+      k8s_cluster:
+        auth_type: serviceAccount
+        collection_interval: 30s
+        node_conditions_to_report: [Ready, MemoryPressure, DiskPressure, PIDPressure]
+        allocatable_types_to_report: [cpu, memory, pods]
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      batch: {}
+    exporters:
+      {{- if .Values.otelCollector.debug}}
+      debug: {}
+      {{- end }}
+      otlp_http/prometheus:
+        endpoint: http://prometheus.{{ $.Values.namespace.name }}.svc.cluster.local:9090/api/v1/otlp
+    extensions:
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [k8s_cluster]
+          processors: [memory_limiter, batch]
+          exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]

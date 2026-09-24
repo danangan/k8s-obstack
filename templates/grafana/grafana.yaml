@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  # One pod at a time: a ReadWriteOnce volume can't be attached to the old and new pod at once.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+      annotations:
+        # Roll the pod when datasources change; provisioning is only read at startup.
+        checksum/datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources.yaml") . | sha256sum }}
+    spec:
+      {{- include "obstack.placement" . | nindent 6 }}
+      {{- with .Values.grafana.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.grafana.plugins }}
+      initContainers:
+        - name: install-plugins
+          image: {{ $.Values.grafana.image }}
+          command: [sh, -c]
+          args:
+            - |
+              set -e
+              for p in {{ join " " . }}; do
+                grafana cli --pluginsDir /var/lib/grafana/plugins plugins install "$p"
+              done
+          volumeMounts:
+            - name: plugins
+              mountPath: /var/lib/grafana/plugins
+      {{- end }}
+      containers:
+        - name: grafana
+          image: {{ .Values.grafana.image }}
+          resources:
+            {{- toYaml .Values.grafana.resources | nindent 12 }}
+          env:
+            {{- if .Values.grafana.anonymousAdmin }}
+            # No login screen, and anonymous users are admins. Local demo use only.
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Admin"
+            - name: GF_AUTH_DISABLE_LOGIN_FORM
+              value: "true"
+            {{- else }}
+            # Admin login; the password comes from an existing Secret.
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "grafana.adminPasswordSecret.name is required when grafana.anonymousAdmin is false" .Values.grafana.adminPasswordSecret.name }}
+                  key: {{ .Values.grafana.adminPasswordSecret.key }}
+            {{- end }}
+            # Skip the background download/update of ~a dozen plugins on every
+            # start; with no persistent volume it re-runs each restart and
+            # pushes memory past the limit. Only the plugins listed in
+            # grafana.plugins are installed, by the init container.
+            - name: GF_PLUGINS_PREINSTALL_DISABLED
+              value: "true"
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            # Grafana's database: dashboards, users, preferences.
+            - name: data
+              mountPath: /var/lib/grafana
+            # Plugins are reinstalled by the init container on every start.
+            - name: plugins
+              mountPath: /var/lib/grafana/plugins
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: plugins
+          emptyDir: {}
+        {{- include "obstack.dataVolume" (dict "name" "grafana" "persistence" .Values.grafana.persistence) | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: {{ $.Values.namespace.name }}
+spec:
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+{{- with (include "obstack.pvc" (dict "root" $ "name" "grafana" "persistence" .Values.grafana.persistence)) }}
+---
+{{ . }}
+{{- end }}

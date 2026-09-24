@@ -1,0 +1,43 @@
+# Lint and render the chart on every change to it, with both the production defaults and the
+# local minikube overrides. The chart is the repository root.
+name: Chart lint
+
+on:
+  pull_request:
+    paths:
+      - Chart.yaml
+      - values.yaml
+      - templates/**
+      - .helmignore
+      - examples/minikube/values-minikube.yaml
+      - .github/workflows/chart-*.yaml
+  push:
+    branches: [main]
+    paths:
+      - Chart.yaml
+      - values.yaml
+      - templates/**
+      - .helmignore
+      - examples/minikube/values-minikube.yaml
+      - .github/workflows/chart-*.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+
+      - name: Lint (production defaults)
+        run: helm lint . --strict
+
+      - name: Lint (minikube overrides)
+        run: helm lint . --strict -f examples/minikube/values-minikube.yaml
+
+      - name: Render
+        run: |
+          helm template obstack . > /dev/null
+          helm template obstack . -f examples/minikube/values-minikube.yaml > /dev/null

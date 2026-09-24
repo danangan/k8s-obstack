@@ -1,0 +1,129 @@
+namespace:
+  name: obstack
+
+placement:
+  nodeSelector:
+    workload: obstack
+  tolerations:
+    - key: dedicated
+      operator: Equal
+      value: obstack
+      effect: NoSchedule
+  affinity: {}
+
+storage:
+  className: obstack-gp3
+  storageClass:
+    create: true
+    name: obstack-gp3
+    provisioner: ebs.csi.aws.com
+    reclaimPolicy: Retain
+    parameters:
+      type: gp3
+      encrypted: "true"
+
+otelCollector:
+  image: otel/opentelemetry-collector-k8s:0.160.0
+  debug: false
+  tolerations:
+    - operator: Exists
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 216Mi
+
+prometheus:
+  image: prom/prometheus:v3.13.3
+  retention:
+    time: 15d
+    size: 45GB
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClassName: ""
+  podSecurityContext:
+    fsGroup: 65534
+  resources:
+    requests:
+      cpu: 250m
+      memory: 1Gi
+    limits:
+      cpu: "1"
+      memory: 4Gi
+
+loki:
+  image: grafana/loki:3.7.8
+  retention: 336h
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClassName: ""
+  podSecurityContext:
+    fsGroup: 10001
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
+tempo:
+  image: grafana/tempo:3.0.3
+  retention: 168h
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClassName: ""
+  podSecurityContext:
+    fsGroup: 10001
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+
+
+grafana:
+  image: grafana/grafana:13.2.2
+  anonymousAdmin: false
+  adminPasswordSecret:
+    # Create it with a random password, reused on every upgrade and kept on `helm uninstall`
+    # (Grafana only reads the password when its database is first created). Read it with
+    #   kubectl -n obstack get secret grafana-admin -o jsonpath='{.data.admin-password}' | base64 -d
+    # Set false to provide your own Secret with this name and key.
+    create: true
+    name: grafana-admin
+    key: admin-password
+  plugins:
+    - grafana-lokiexplore-app
+    - grafana-exploretraces-app
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: ""
+  podSecurityContext:
+    fsGroup: 472
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+ingress:
+  enabled: true
+  ingressClassName: alb
+  grafanaHost: ""
+  # Ingress annotations; for the ALB controller they configure the load balancer.
+  # See https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/ingress/annotations/
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health

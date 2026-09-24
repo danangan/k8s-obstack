@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: {{ $.Values.namespace.name }}
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    # Fixed UIDs so the datasources can link to each other:
+    # metrics -> traces (exemplars), logs <-> traces (trace_id), traces -> service map.
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.{{ $.Values.namespace.name }}.svc.cluster.local:9090
+        isDefault: true
+        jsonData:
+          exemplarTraceIdDestinations:
+            # Exemplars from the app's OTLP histograms.
+            - name: trace_id
+              datasourceUid: tempo
+            # Exemplars from Tempo's span-metrics.
+            - name: traceID
+              datasourceUid: tempo
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://loki.{{ $.Values.namespace.name }}.svc.cluster.local:3100
+        jsonData:
+          # trace_id is structured metadata on JSON logs; link it to the trace in Tempo.
+          derivedFields:
+            - name: trace_id
+              matcherType: label
+              matcherRegex: trace_id
+              datasourceUid: tempo
+              url: "${__value.raw}"
+              urlDisplayLabel: View trace
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo.{{ $.Values.namespace.name }}.svc.cluster.local:3200
+        jsonData:
+          # "Logs for this span": the service's log lines carrying this trace ID.
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: -5m
+            spanEndTimeShift: 5m
+            customQuery: true
+            query: '{service_name="${__span.tags["service.name"]}"} | trace_id="${__trace.traceId}"'
+          serviceMap:
+            datasourceUid: prometheus
+          nodeGraph:
+            enabled: true

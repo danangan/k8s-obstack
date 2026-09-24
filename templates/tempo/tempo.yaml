@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    app: tempo
+spec:
+  replicas: 1
+  # One pod at a time: a ReadWriteOnce volume can't be attached to the old and new pod at once.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+      annotations:
+        # Roll the pod when the ConfigMap changes; Tempo doesn't reload on its own.
+        checksum/config: {{ include (print $.Template.BasePath "/tempo/tempo-config.yaml") . | sha256sum }}
+    spec:
+      {{- include "obstack.placement" . | nindent 6 }}
+      {{- with .Values.tempo.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: tempo
+          image: {{ .Values.tempo.image }}
+          resources:
+            {{- toYaml .Values.tempo.resources | nindent 12 }}
+          args:
+            - -target=all
+            - -config.file=/etc/tempo/tempo.yaml
+            # How long trace blocks are kept.
+            - -backend-scheduler.provider.work.compaction.block-retention={{ .Values.tempo.retention }}
+          ports:
+            - name: http
+              containerPort: 3200
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+            - name: data
+              mountPath: /var/tempo
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+        {{- include "obstack.dataVolume" (dict "name" "tempo" "persistence" .Values.tempo.persistence) | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: {{ $.Values.namespace.name }}
+spec:
+  selector:
+    app: tempo
+  ports:
+    - name: http
+      port: 3200
+      targetPort: 3200
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+{{- with (include "obstack.pvc" (dict "root" $ "name" "tempo" "persistence" .Values.tempo.persistence)) }}
+---
+{{ . }}
+{{- end }}

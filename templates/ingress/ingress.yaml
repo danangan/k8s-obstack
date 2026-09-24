@@ -1,0 +1,31 @@
+{{- if .Values.ingress.enabled }}
+# Exposes Grafana. By default through an AWS Application Load Balancer (AWS Load Balancer
+# Controller, IngressClass `alb`); configured by ingress.annotations.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: {{ $.Values.namespace.name }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.ingressClassName }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    # Without a host, Grafana answers on any hostname (e.g. the ALB's own DNS name).
+    - {{- with .Values.ingress.grafanaHost }}
+      host: {{ . }}
+      {{- end }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  name: http
+{{- end }}

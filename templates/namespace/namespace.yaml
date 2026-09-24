@@ -1,0 +1,20 @@
+{{- if not .Values.namespace.name }}
+{{- fail "namespace.name is required: the namespace for all of the stack's resources" }}
+{{- end }}
+{{- if eq .Values.namespace.name .Release.Namespace }}
+{{- fail (printf "The chart creates namespace %q, so the release can't be installed into it: Helm stores its release record in the -n namespace, which must already exist. Install the release into an existing namespace instead (e.g. `-n default`)." .Release.Namespace) }}
+{{- end }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name }}
+  labels:
+    # The node collector DaemonSet needs hostPath volumes (pod logs, host metrics, read
+    # offsets) and hostPorts (OTLP 4317/4318), which `baseline` forbids, so enforce
+    # `privileged`. Anything else that breaks `baseline` is still reported: as a warning on
+    # apply, and in the API server's audit log.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+    pod-security.kubernetes.io/audit: baseline
+  annotations:
+    helm.sh/resource-policy: keep

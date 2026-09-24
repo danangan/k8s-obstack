@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector
+  namespace: {{ $.Values.namespace.name }}
+---
+# Read-only access shared by both collectors: k8s_attributes (pod/node/deployment
+# metadata), kubelet_stats (nodes/stats) and k8s_cluster (workload state).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-otel-collector
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/status
+      - namespaces
+      - namespaces/status
+      - nodes
+      - nodes/spec
+      - nodes/stats
+      - events
+      - services
+      - resourcequotas
+      - replicationcontrollers
+      - replicationcontrollers/status
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets, daemonsets, statefulsets]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}-otel-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}-otel-collector
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector
+    namespace: {{ $.Values.namespace.name }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  namespace: {{ $.Values.namespace.name }}
+  labels:
+    app: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+      annotations:
+        # Roll the pods when the ConfigMap changes; the collector doesn't reload on its own.
+        checksum/config: {{ include (print $.Template.BasePath "/otel/otel-collector-config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: otel-collector
+      # Not pinned: it collects each node's metrics and logs, so it must run on every node,
+      # including the tainted dedicated obstack nodes.
+      {{- with .Values.otelCollector.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # Root is needed to read /var/log/pods (root-owned, mode 0640) for the
+      # file_log receiver; the host filesystem is still mounted read-only.
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+        - name: otel-collector
+          image: {{ .Values.otelCollector.image }}
+          resources:
+            {{- toYaml .Values.otelCollector.resources | nindent 12 }}
+          args:
+            - --config=/etc/otelcol/config.yaml
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: K8S_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          ports:
+            # hostPort so workloads can reach the node-local collector via status.hostIP
+            - name: otlp
+              containerPort: 4317
+              hostPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+              hostPort: 4318
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol
+            # Node root filesystem for the host_metrics receiver.
+            - name: hostfs
+              mountPath: /hostfs
+              readOnly: true
+              mountPropagation: HostToContainer
+            - name: storage
+              mountPath: /var/lib/otelcol
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+        - name: hostfs
+          hostPath:
+            path: /
+        # file_log read offsets (file_storage extension).
+        - name: storage
+          hostPath:
+            path: /var/lib/otelcol
+            type: DirectoryOrCreate

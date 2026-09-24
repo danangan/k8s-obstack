@@ -1,0 +1,21 @@
+# Patterns to ignore when packaging the chart (`helm package`). The chart is the repository
+# root, so everything that isn't part of the chart must be listed here.
+
+# Repository content that isn't part of the chart
+examples/
+.github/
+.claude/
+dist/
+*.tgz
+
+# VCS, OS and editor files
+.git/
+.gitignore
+.DS_Store
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.idea/
+.vscode/
