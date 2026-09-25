@@ -2,7 +2,7 @@ apiVersion: v2
 name: obstack
 description: "Opinionated, self-contained observability stack for Kubernetes: OpenTelemetry collectors with Prometheus, Loki, Tempo and Grafana"
 type: application
-version: 0.1.0
+version: 0.1.1
 home: https://github.com/danangan/k8s-obstack
 sources:
   - https://github.com/danangan/k8s-obstack
