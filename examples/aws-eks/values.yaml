@@ -1,0 +1,76 @@
+# Small sizes for a test deployment on EKS, layered on top of the chart's values.yaml.
+# Volumes can grow but not shrink: this only works on a fresh install, not over one that
+# already has the default 50Gi volumes. 1Gi is the smallest EBS gp3 volume.
+
+# Run on any node instead of a dedicated obstack node group. (`null` removes the default
+# nodeSelector; an empty map would be merged with the default and keep it.)
+placement:
+  nodeSelector: null
+
+otelCollector:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+otelClusterCollector:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+prometheus:
+  retention:
+    time: 3d
+    size: 500MB
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+loki:
+  retention: 72h
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+tempo:
+  retention: 72h
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Grafana alone uses ~400Mi once started.
+grafana:
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 384Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi

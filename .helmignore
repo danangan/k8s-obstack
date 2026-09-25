@@ -3,6 +3,7 @@
 
 # Repository content that isn't part of the chart
 examples/
+local-dev/
 .github/
 .claude/
 dist/

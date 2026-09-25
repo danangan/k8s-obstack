@@ -16,6 +16,7 @@ storage:
   storageClass:
     create: true
     name: obstack-gp3
+    # On AWS EKS auto mode this should be ebs.csi.eks.amazonaws.com
     provisioner: ebs.csi.aws.com
     reclaimPolicy: Retain
     parameters:

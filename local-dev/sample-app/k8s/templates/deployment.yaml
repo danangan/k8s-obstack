@@ -16,12 +16,12 @@ spec:
     spec:
       containers:
         - name: sample-app
-          image: sample-app:latest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           resources:
             limits:
               cpu: 100m
               memory: 128Mi
-          imagePullPolicy: Never   # image is built into minikube's docker daemon
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 8000
           env:

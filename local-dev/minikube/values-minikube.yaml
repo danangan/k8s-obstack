@@ -1,7 +1,7 @@
 # Local development on minikube. Layered on top of the chart's values.yaml (the AWS
-# production defaults) by examples/minikube/deploy-obstack.sh, which runs (from the repo root)
-#   helm upgrade --install obstack . -f examples/minikube/values-minikube.yaml
-# Excluded from the published chart package by the root .helmignore (examples/).
+# production defaults) by local-dev/minikube/deploy-obstack.sh, which runs (from the repo root)
+#   helm upgrade --install obstack . -f local-dev/minikube/values-minikube.yaml
+# Excluded from the published chart package by the root .helmignore (local-dev/).
 
 # No dedicated node: run on the single minikube node. (`null` removes the default map key;
 # an empty map would be merged with the defaults and keep them.)

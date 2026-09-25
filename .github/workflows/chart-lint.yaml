@@ -10,7 +10,7 @@ on:
       - templates/**
       - configs/**
       - .helmignore
-      - examples/minikube/values-minikube.yaml
+      - local-dev/minikube/values-minikube.yaml
       - .github/workflows/chart-*.yaml
   push:
     branches: [main]
@@ -20,7 +20,7 @@ on:
       - templates/**
       - configs/**
       - .helmignore
-      - examples/minikube/values-minikube.yaml
+      - local-dev/minikube/values-minikube.yaml
       - .github/workflows/chart-*.yaml
 
 permissions:
@@ -37,9 +37,9 @@ jobs:
         run: helm lint . --strict
 
       - name: Lint (minikube overrides)
-        run: helm lint . --strict -f examples/minikube/values-minikube.yaml
+        run: helm lint . --strict -f local-dev/minikube/values-minikube.yaml
 
       - name: Render
         run: |
           helm template obstack . > /dev/null
-          helm template obstack . -f examples/minikube/values-minikube.yaml > /dev/null
+          helm template obstack . -f local-dev/minikube/values-minikube.yaml > /dev/null
