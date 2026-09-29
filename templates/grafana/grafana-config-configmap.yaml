@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: {{ $.Values.namespace.name }}
+data:
+  grafana.ini: |
+    {{- range $section, $settings := .Values.grafana.config }}
+    [{{ $section }}]
+    {{- range $key, $value := $settings }}
+    {{ $key }} = {{ $value }}
+    {{- end }}
+    {{- end }}

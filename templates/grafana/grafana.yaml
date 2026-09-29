@@ -20,6 +20,7 @@ spec:
       annotations:
         # Roll the pod when datasources change; provisioning is only read at startup.
         checksum/datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/grafana/grafana-config-configmap.yaml") . | sha256sum }}
     spec:
       # Pin to the dedicated obstack node group (placement.* values).
       {{- with .Values.placement.nodeSelector }}
@@ -83,6 +84,10 @@ spec:
             # grafana.plugins are installed, by the init container.
             - name: GF_PLUGINS_PREINSTALL_DISABLED
               value: "true"
+          {{- with .Values.grafana.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: 3000
@@ -91,6 +96,9 @@ spec:
               path: /api/health
               port: http
           volumeMounts:
+            - name: config
+              mountPath: /etc/grafana/grafana.ini
+              subPath: grafana.ini
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
             # Grafana's database: dashboards, users, preferences.
@@ -100,6 +108,9 @@ spec:
             - name: plugins
               mountPath: /var/lib/grafana/plugins
       volumes:
+        - name: config
+          configMap:
+            name: grafana-config
         - name: datasources
           configMap:
             name: grafana-datasources

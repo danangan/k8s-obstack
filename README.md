@@ -138,6 +138,8 @@ All of these defaults can be changed through values. This is the full reference 
 | `grafana.anonymousAdmin` | `false` | `true` = no login, anonymous admins (local use only) |
 | `grafana.adminPasswordSecret.create` | `true` | Create the Secret with a random password (`false` = bring your own) |
 | `grafana.adminPasswordSecret.name` / `.key` | `grafana-admin` / `admin-password` | Secret with the admin password |
+| `grafana.config` | `{}` | `grafana.ini` settings as `{section: {key: value}}`, e.g. [single sign-on](#single-sign-on) |
+| `grafana.envFrom` | `[]` | Extra environment for Grafana, e.g. a Secret with `GF_*` variables |
 | `grafana.plugins` | Logs and Traces Drilldown | Plugins installed at startup |
 | `ingress.enabled` / `.ingressClassName` | `true` / `alb` | Ingress for Grafana (AWS Load Balancer Controller) |
 | `ingress.grafanaHost` | `""` | Hostname for Grafana (empty = any, e.g. the ALB's DNS name) |
@@ -187,6 +189,40 @@ Alternatively, if you decide not to use the Ingress, you can access the Grafana 
 ```sh
 kubectl -n obstack port-forward svc/grafana 3000
 ```
+
+### Single sign-on
+
+Grafana supports OAuth/OIDC providers such as Okta, Azure AD, Google, GitHub and any generic OIDC
+provider ([docs](https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-authentication/)).
+Configure one through `grafana.config`, and keep the client secret in a Secret. For example, with
+[Okta](https://grafana.com/docs/grafana/latest/setup-grafana/configure-security/configure-authentication/okta/):
+
+```sh
+kubectl -n obstack create secret generic grafana-okta \
+  --from-literal=GF_AUTH_OKTA_CLIENT_SECRET=<client-secret>
+```
+
+```yaml
+grafana:
+  config:
+    server:
+      # The OAuth redirect URI is built from it: https://grafana.example.com/login/okta
+      root_url: https://grafana.example.com
+    auth.okta:
+      enabled: true
+      client_id: <client-id>
+      scopes: openid profile email groups
+      auth_url: https://<tenant>.okta.com/oauth2/v1/authorize
+      token_url: https://<tenant>.okta.com/oauth2/v1/token
+      api_url: https://<tenant>.okta.com/oauth2/v1/userinfo
+      role_attribute_path: contains(groups[*], 'grafana-admins') && 'Admin' || 'Viewer'
+  envFrom:
+    - secretRef:
+        name: grafana-okta
+```
+
+Most providers only accept HTTPS redirect URIs, so serve Grafana over HTTPS, e.g. with the ALB's
+`certificate-arn` and `listen-ports` annotations in `ingress.annotations`.
 
 ## Examples
 
