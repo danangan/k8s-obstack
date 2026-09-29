@@ -21,7 +21,7 @@ spec:
         # Roll the pod when the ConfigMap changes; Prometheus doesn't reload on its own.
         checksum/config: {{ include (print $.Template.BasePath "/prometheus/prometheus-configmap.yaml") . | sha256sum }}
     spec:
-      # Pin to the dedicated obstack node group (placement.* values).
+      # Optional node placement (placement.* values).
       {{- with .Values.placement.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

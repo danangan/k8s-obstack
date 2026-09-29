@@ -1,7 +1,7 @@
 image:
   repository: sample-app
   tag: latest
-  # Never: build-and-deploy.sh builds the image straight into minikube.
+  # Never: local-dev/build-and-deploy-sample-app.sh builds the image straight into minikube.
   pullPolicy: Never
 
 ingress:

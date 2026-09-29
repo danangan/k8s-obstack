@@ -14,7 +14,7 @@ and the sample app into it.
   `sample-app` is a small Python HTTP API that generates logs, metrics and traces for local
   development.
 
-[minikube/minikube-setup.sh](minikube/minikube-setup.sh) creates a minikube node with 4 CPUs and
+[minikube-setup.sh](minikube-setup.sh) creates a minikube node with 4 CPUs and
 8 GB of memory. On macOS, Docker and Podman both run containers inside a VM, and that VM needs at
 least **4 CPUs and 9 GB of memory**: the node's 8 GB plus headroom.
 
@@ -30,14 +30,14 @@ From the repository root:
 
 ```sh
 # 1. Start minikube (Docker, falling back to Podman; 4 CPUs / 8 GB) and enable ingress + metrics-server
-./local-dev/minikube/minikube-setup.sh
+./local-dev/minikube-setup.sh
 
 # 2. Deploy the stack into the `obstack` namespace, with the minikube overrides
-#    (local-dev/minikube/values-minikube.yaml) on top of the chart's AWS production defaults
-./local-dev/minikube/deploy-obstack.sh
+#    (local-dev/values-minikube.yaml) on top of the chart's AWS production defaults
+./local-dev/deploy-obstack.sh
 
 # 3. Build the sample app image inside minikube and deploy it
-./local-dev/sample-app/build-and-deploy.sh
+./local-dev/build-and-deploy-sample-app.sh
 
 # 4. Expose the ingress to the host machine (leave this running; it asks for sudo)
 minikube tunnel
@@ -55,6 +55,8 @@ Then open **Grafana** at <http://grafana.localtest.me>. Locally there's no login
 
 | Path | Description |
 | --- | --- |
-| [minikube/](minikube/) | Start the minikube cluster, and deploy the stack with the local overrides |
-| [sample-app/](sample-app/) | FastAPI app (managed with [uv](https://docs.astral.sh/uv/)) instrumented with OpenTelemetry, and its build-and-deploy script |
-| [sample-app/k8s/](sample-app/k8s/) | Helm chart for the sample app |
+| [minikube-setup.sh](minikube-setup.sh) | Start the minikube cluster |
+| [deploy-obstack.sh](deploy-obstack.sh), [values-minikube.yaml](values-minikube.yaml) | Deploy the stack with the local overrides |
+| [build-and-deploy-sample-app.sh](build-and-deploy-sample-app.sh) | Build the sample app image inside minikube and deploy it |
+| [../examples/sample-app/](../examples/sample-app/) | FastAPI app (managed with [uv](https://docs.astral.sh/uv/)) instrumented with OpenTelemetry |
+| [../examples/sample-app/k8s/](../examples/sample-app/k8s/) | Helm chart for the sample app |

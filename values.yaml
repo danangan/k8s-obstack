@@ -1,14 +1,19 @@
 namespace:
   name: obstack
 
+# Where the central components run (not the node collector, which runs on every node).
+# Empty = any node. To pin them to a dedicated node group, e.g. one labeled workload=obstack
+# and tainted dedicated=obstack:NoSchedule:
+#   nodeSelector:
+#     workload: obstack
+#   tolerations:
+#     - key: dedicated
+#       operator: Equal
+#       value: obstack
+#       effect: NoSchedule
 placement:
-  nodeSelector:
-    workload: obstack
-  tolerations:
-    - key: dedicated
-      operator: Equal
-      value: obstack
-      effect: NoSchedule
+  nodeSelector: {}
+  tolerations: []
   affinity: {}
 
 storage:

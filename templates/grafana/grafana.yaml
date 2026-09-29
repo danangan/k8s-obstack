@@ -22,7 +22,7 @@ spec:
         checksum/datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
         checksum/config: {{ include (print $.Template.BasePath "/grafana/grafana-config-configmap.yaml") . | sha256sum }}
     spec:
-      # Pin to the dedicated obstack node group (placement.* values).
+      # Optional node placement (placement.* values).
       {{- with .Values.placement.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

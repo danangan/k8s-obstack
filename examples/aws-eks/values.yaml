@@ -2,11 +2,6 @@
 # Volumes can grow but not shrink: this only works on a fresh install, not over one that
 # already has the default 50Gi volumes. 1Gi is the smallest EBS gp3 volume.
 
-# Run on any node instead of a dedicated obstack node group. (`null` removes the default
-# nodeSelector; an empty map would be merged with the default and keep it.)
-placement:
-  nodeSelector: null
-
 otelCollector:
   resources:
     requests:

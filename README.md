@@ -102,8 +102,10 @@ To start with, you need the following:
 This chart is opinionated towards AWS EKS as its target, which requires:
 - The AWS Load Balancer Controller, which provides the `alb` IngressClass. Grafana is exposed through an internal Application Load Balancer by default.
 - The AWS EBS CSI driver (EKS add-on `aws-ebs-csi-driver`)
-- A dedicated node group in a single availability zone, labeled `workload=obstack` and tainted
-  `dedicated=obstack:NoSchedule`. This ensures that the obstack pods are deployed to a dedicated node group, mainly for storage management and isolation.
+
+An EBS volume lives in one availability zone, so a component can only be rescheduled onto a node in
+the zone where its volume was created. Keep node capacity in that zone. To run the stack on a
+dedicated node group instead of any node, set `placement.*`.
 
 ### 1. Install the chart
 
@@ -128,7 +130,7 @@ All of these defaults can be changed through values. This is the full reference 
 | Value | Default | Description |
 | --- | --- | --- |
 | `namespace.name` | `obstack` | Namespace for all resources (empty = the release namespace) |
-| `placement.nodeSelector` / `.tolerations` / `.affinity` | `workload: obstack` / `dedicated=obstack:NoSchedule` | Where the central components run |
+| `placement.nodeSelector` / `.tolerations` / `.affinity` | empty (any node) | Where the central components run, e.g. a dedicated node group |
 | `storage.className` | `obstack-gp3` | StorageClass for all volumes (empty = cluster default) |
 | `storage.storageClass.create` | `true` | Create the EBS gp3 StorageClass (expandable, `Retain`) |
 | `<component>.persistence.size` | 50Gi (Grafana 5Gi) | Volume per component: `prometheus`, `loki`, `tempo`, `grafana` |
@@ -228,6 +230,8 @@ Most providers only accept HTTPS redirect URIs, so serve Grafana over HTTPS, e.g
 
 - [Deployment to AWS EKS](examples/aws-eks/README.md): deploy the stack and the sample app to an
   existing EKS cluster.
+- [Sample app](examples/sample-app/): a FastAPI app instrumented with OpenTelemetry, used by the
+  examples and local development.
 
 ## Local development
 

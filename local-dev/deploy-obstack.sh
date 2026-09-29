@@ -12,10 +12,10 @@ RELEASE_NAMESPACE="default"
 NAMESPACE="obstack"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The chart is the repository root.
-CHART="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+CHART="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 context="$(kubectl config current-context 2>/dev/null || true)"
-[[ "$context" == minikube* ]] || die "kubectl context is '${context}', not minikube. Run local-dev/minikube/minikube-setup.sh or switch context first."
+[[ "$context" == minikube* ]] || die "kubectl context is '${context}', not minikube. Run local-dev/minikube-setup.sh or switch context first."
 
 log "Deploying ${RELEASE} to namespace ${NAMESPACE} (context ${context})..."
 helm upgrade --install "$RELEASE" "$CHART" \

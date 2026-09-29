@@ -1,0 +1,52 @@
+storage:
+  className: ""
+  storageClass:
+    create: false
+
+prometheus:
+  retention:
+    time: 7d
+    size: 2GB
+  persistence:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 216Mi
+
+loki:
+  retention: 168h
+  persistence:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+tempo:
+  retention: 168h
+  persistence:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+grafana:
+  anonymousAdmin: true
+  persistence:
+    size: 1Gi
+
+ingress:
+  ingressClassName: nginx
+  grafanaHost: grafana.localtest.me
+  annotations: null

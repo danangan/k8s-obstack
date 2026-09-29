@@ -7,9 +7,7 @@ set -euo pipefail
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$1"; }
 
 PROFILE="${MINIKUBE_PROFILE:-minikube}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# The script lives in the sample app directory.
-APP_DIR="${SCRIPT_DIR}"
+APP_DIR="$(dirname "$0")/../examples/sample-app"
 
 log "Building container image..."
 # Building via minikube would make the image instantly accessible from within the cluster

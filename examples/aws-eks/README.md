@@ -1,10 +1,10 @@
 # Deployment to AWS EKS example
 
-Deploys the stack and the [sample app](../../local-dev/sample-app/) to an existing EKS cluster.
+Deploys the stack and the [sample app](../sample-app/) to an existing EKS cluster.
 
 Set the cluster name and region at the top of [deploy.sh](deploy.sh), then run it. It connects
 kubectl to the cluster with `aws eks update-kubeconfig` and deploys the chart with
-[values.yaml](values.yaml): small sizes for testing, on any node instead of a dedicated node group.
+[values.yaml](values.yaml): small sizes for testing.
 The cluster needs the AWS Load Balancer Controller and the EBS CSI driver (see the
 [prerequisites](../../README.md#prerequisites)).
 
@@ -14,7 +14,7 @@ From the repository root:
 # 1. Deploy the stack
 ./examples/aws-eks/deploy.sh
 
-# 2. Build the sample app for arm64, push it to ECR (repository `sample-app`) and deploy it
+# 2. Build the sample app for amd64 and arm64, push it to ECR (repository `sample-app`) and deploy it
 ./examples/aws-eks/deploy-sample-app.sh
 
 # 3. Forward a local port to the sample app (leave this running)
