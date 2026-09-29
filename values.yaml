@@ -40,6 +40,42 @@ otelCollector:
       cpu: 500m
       memory: 512Mi
 
+# NVIDIA GPU metrics from DCGM Exporter, a DaemonSet on GPU nodes. Each node collector scrapes
+# the exporter on its own node. See https://github.com/NVIDIA/dcgm-exporter
+gpu:
+  enabled: false
+  image: nvcr.io/nvidia/k8s/dcgm-exporter:4.6.1-4.8.4-distroless
+  # Which nodes run the exporter. The default affinity matches NVIDIA GPU nodes labeled by EKS
+  # Auto Mode, Karpenter or the NVIDIA GPU Operator (any one of them). For other nodes, e.g. an
+  # EKS managed node group, set `affinity: null` and select them with nodeSelector instead:
+  #   nodeSelector:
+  #     eks.amazonaws.com/nodegroup: gpu
+  nodeSelector: {}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - {key: eks.amazonaws.com/instance-gpu-manufacturer, operator: In, values: [nvidia]}
+          - matchExpressions:
+              - {key: karpenter.k8s.aws/instance-gpu-manufacturer, operator: In, values: [nvidia]}
+          - matchExpressions:
+              - {key: nvidia.com/gpu.present, operator: In, values: ["true"]}
+  # GPU nodes are commonly tainted nvidia.com/gpu.
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+  # Set when the NVIDIA container runtime isn't the node's default, e.g. `nvidia` with the
+  # GPU Operator.
+  runtimeClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
 otelClusterCollector:
   resources:
     requests:

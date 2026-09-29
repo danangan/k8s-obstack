@@ -147,6 +147,9 @@ All of these defaults can be changed through values. This is the full reference 
 | `ingress.grafanaHost` | `""` | Hostname for Grafana (empty = any, e.g. the ALB's DNS name) |
 | `ingress.annotations` | internal ALB, IP targets | ALB settings: scheme, HTTPS certificate, and so on |
 | `otelCollector.debug` | `false` | Also print all telemetry to the collector logs |
+| `gpu.enabled` | `false` | Collect [NVIDIA GPU metrics](#gpu-metrics) with DCGM Exporter |
+| `gpu.nodeSelector` / `.affinity` / `.tolerations` | NVIDIA GPU nodes / `nvidia.com/gpu` taint | Which nodes run DCGM Exporter |
+| `gpu.runtimeClassName` | `""` | RuntimeClass for DCGM Exporter, if the NVIDIA runtime isn't the node's default |
 
 See [values.yaml](values.yaml) for everything, including images and resources.
 
@@ -246,7 +249,7 @@ and Loki, the dots become underscores (`k8s_pod_name`).
 
 ### Metrics
 
-Metrics come from five sources, all pushed to Prometheus over OTLP rather than scraped:
+Metrics come from these sources, all pushed to Prometheus over OTLP rather than scraped by Prometheus:
 
 | Source | Collected by | Examples |
 | --- | --- | --- |
@@ -254,7 +257,28 @@ Metrics come from five sources, all pushed to Prometheus over OTLP rather than s
 | **Kubelet**: resource usage of each node, pod and container | Node collector (`kubelet_stats`) | `k8s_node_cpu_usage`, `k8s_pod_memory_working_set_bytes`, `container_cpu_time_seconds_total`, `k8s_pod_network_io_bytes_total` |
 | **Host**: the node's operating system, read from `/proc` and its filesystems | Node collector (`host_metrics`) | `system_cpu_load_average_1m`, `system_memory_usage_bytes`, `system_disk_io_bytes_total`, `system_filesystem_usage_bytes` |
 | **Kubernetes API**: declared state of cluster objects | Cluster collector (`k8s_cluster`) | `k8s_deployment_available`, `k8s_pod_phase`, `k8s_container_restarts`, `k8s_container_memory_limit_bytes`, `k8s_node_condition_ready` |
+| **NVIDIA GPUs**, if `gpu.enabled` | Node collector (`prometheus/dcgm`), from [DCGM Exporter](https://github.com/NVIDIA/dcgm-exporter) | `DCGM_FI_DEV_GPU_UTIL`, `DCGM_FI_DEV_FB_USED`, `DCGM_FI_DEV_GPU_TEMP`, `DCGM_FI_DEV_POWER_USAGE` |
 | **Traces**: derived by Tempo | Tempo's metrics generator | `traces_spanmetrics_calls_total`, `traces_spanmetrics_latency_bucket`, `traces_service_graph_request_total` |
+
+#### GPU metrics
+
+With `gpu.enabled: true`, the chart runs [DCGM Exporter](https://github.com/NVIDIA/dcgm-exporter) on
+NVIDIA GPU nodes, and the node collector on each of those nodes scrapes it. Each GPU's metrics carry
+the `pod`, `namespace` and `container` using it. The nodes need the NVIDIA driver, as on EKS GPU AMIs
+and EKS Auto Mode.
+
+By default the exporter runs on nodes labeled by EKS Auto Mode, Karpenter or the NVIDIA GPU Operator.
+To pick the nodes yourself, e.g. an EKS managed node group:
+
+```yaml
+gpu:
+  enabled: true
+  affinity: null
+  nodeSelector:
+    eks.amazonaws.com/nodegroup: gpu
+```
+
+For a dashboard, import NVIDIA's [DCGM Exporter dashboard](https://grafana.com/grafana/dashboards/12239).
 
 ### Logs
 

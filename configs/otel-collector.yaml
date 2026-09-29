@@ -27,6 +27,26 @@ receivers:
           # Pod volumes the kubelet mounts, including attached EBS volume claims: real devices,
           # but per-pod mounts that come and go with pods.
           mount_points: ["^/var/lib/kubelet/.*"]
+  {{- if .Values.gpu.enabled }}
+  # DCGM Exporter on this node, if any: nodes without it have no target.
+  prometheus/dcgm:
+    config:
+      scrape_configs:
+        - job_name: dcgm-exporter
+          scrape_interval: 30s
+          kubernetes_sd_configs:
+            - role: pod
+              namespaces:
+                names: [{{ $.Values.namespace.name }}]
+              selectors:
+                - role: pod
+                  label: app=dcgm-exporter
+                  field: spec.nodeName=${env:K8S_NODE_NAME}
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_container_port_name]
+              regex: metrics
+              action: keep
+  {{- end }}
   file_log:
     include:
       - /var/log/pods/*/*/*.log
@@ -98,7 +118,7 @@ service:
       processors: [memory_limiter, k8s_attributes, batch]
       exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]
     metrics/node:
-      receivers: [kubelet_stats, host_metrics]
+      receivers: [kubelet_stats, host_metrics{{ if .Values.gpu.enabled }}, prometheus/dcgm{{ end }}]
       processors: [memory_limiter, resource/node, k8s_attributes, batch]
       exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]
     logs:
