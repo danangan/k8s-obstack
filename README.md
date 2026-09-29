@@ -117,7 +117,9 @@ The chart is pulled straight from GHCR; there's no `helm repo add` step and no l
 versions are listed on the [package page](https://github.com/danangan/k8s-obstack/pkgs/container/charts%2Fobstack),
 and `helm show chart oci://ghcr.io/danangan/charts/obstack` shows the latest one.
 
-The chart creates the `obstack` namespace and puts everything in it. 
+The chart creates the `obstack` namespace and puts everything in it. To use an existing namespace instead, set
+`namespace.create: false`. The node collector needs hostPath volumes and hostPorts, so that namespace must allow
+`privileged` pods.
 
 The chart also creates a random Grafana admin password. It's reused on upgrades and kept on uninstall:
 
@@ -129,7 +131,8 @@ All of these defaults can be changed through values. This is the full reference 
 
 | Value | Default | Description |
 | --- | --- | --- |
-| `namespace.name` | `obstack` | Namespace for all resources (empty = the release namespace) |
+| `namespace.name` | `obstack` | Namespace for all resources |
+| `namespace.create` | `true` | Create the namespace. `false` uses an existing one, which can be the release namespace |
 | `placement.nodeSelector` / `.tolerations` / `.affinity` | empty (any node) | Where the central components run, e.g. a dedicated node group |
 | `storage.className` | `obstack-gp3` | StorageClass for all volumes (empty = cluster default) |
 | `storage.storageClass.create` | `true` | Create the EBS gp3 StorageClass (expandable, `Retain`) |

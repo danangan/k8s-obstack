@@ -1,5 +1,7 @@
 namespace:
   name: obstack
+  # false = use an existing namespace, e.g. the release namespace
+  create: true
 
 # Where the central components run (not the node collector, which runs on every node).
 # Empty = any node. To pin them to a dedicated node group, e.g. one labeled workload=obstack

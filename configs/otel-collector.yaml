@@ -87,6 +87,20 @@ processors:
         - k8s.node.name
         - k8s.node.uid
         - k8s.deployment.name
+      labels:
+        - from: pod
+          key_regex: (.*)
+          tag_name: k8s.pod.label.$$1
+  # Prometheus only promotes resource attributes it's configured with, so copy the dynamic
+  # pod label attributes onto each datapoint.
+  transform/pod_labels:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(cache["labels"], resource.attributes)
+          - keep_matching_keys(cache["labels"], "^k8s.pod.label.")
+          - merge_maps(attributes, cache["labels"], "insert")
   resource/node:
     attributes:
       - key: k8s.node.name
@@ -115,11 +129,11 @@ service:
   pipelines:
     metrics:
       receivers: [otlp]
-      processors: [memory_limiter, k8s_attributes, batch]
+      processors: [memory_limiter, k8s_attributes, transform/pod_labels, batch]
       exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]
     metrics/node:
       receivers: [kubelet_stats, host_metrics{{ if .Values.gpu.enabled }}, prometheus/dcgm{{ end }}]
-      processors: [memory_limiter, resource/node, k8s_attributes, batch]
+      processors: [memory_limiter, resource/node, k8s_attributes, transform/pod_labels, batch]
       exporters: [{{ if .Values.otelCollector.debug }}debug, {{ end }}otlp_http/prometheus]
     logs:
       receivers: [file_log, otlp]

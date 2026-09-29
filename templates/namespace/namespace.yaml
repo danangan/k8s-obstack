@@ -1,6 +1,7 @@
 {{- if not .Values.namespace.name }}
 {{- fail "namespace.name is required: the namespace for all of the stack's resources" }}
 {{- end }}
+{{- if .Values.namespace.create }}
 {{- if eq .Values.namespace.name .Release.Namespace }}
 {{- fail (printf "The chart creates namespace %q, so the release can't be installed into it: Helm stores its release record in the -n namespace, which must already exist. Install the release into an existing namespace instead (e.g. `-n default`)." .Release.Namespace) }}
 {{- end }}
@@ -18,3 +19,4 @@ metadata:
     pod-security.kubernetes.io/audit: baseline
   annotations:
     helm.sh/resource-policy: keep
+{{- end }}
