@@ -11,7 +11,7 @@ Features:
 - A standardised entry point for metrics, logs and traces using the OTel collector
 - Metrics, logs and traces collection for your apps running in Kubernetes
 - Kubernetes cluster metrics
-- Host (node) metrics
+- Host (node) metrics, including GPU metrics (nvidia GPU only)
 - A Grafana UI to query and explore metrics, logs and traces
 - Persistent volume for the backends
 - Ingress setup to expose Grafana UI
